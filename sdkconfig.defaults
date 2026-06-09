@@ -1,0 +1,44 @@
+# =============================================================
+# ESP32 WiFi Extender — ESP-IDF SDK Configuration
+# =============================================================
+# These settings override ESP-IDF defaults to enable NAPT
+# (Network Address Port Translation) and optimize the network
+# stack for WiFi repeater/extender use.
+# =============================================================
+
+# ---- Critical: Enable IP Forwarding & NAPT ----
+CONFIG_LWIP_IP_FORWARD=y
+CONFIG_LWIP_IPV4_NAPT=y
+
+# ---- lwIP Network Stack Optimization ----
+CONFIG_LWIP_L2_TO_L3_COPY=y
+CONFIG_LWIP_MAX_SOCKETS=16
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=14360
+CONFIG_LWIP_TCP_WND_DEFAULT=14360
+CONFIG_LWIP_DHCPS_MAX_STATION_NUM=8
+
+# ---- CPU Clock Speed ----
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=240
+
+# ---- WiFi Configuration ----
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=y
+CONFIG_ESP_WIFI_NVS_ENABLED=y
+
+# ---- HTTP Server (for web portal) ----
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+CONFIG_HTTPD_MAX_URI_LEN=512
+
+# ---- FreeRTOS ----
+CONFIG_FREERTOS_HZ=1000
+
+# ---- Log Level (Info) ----
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_DEFAULT_LEVEL=3
+
+# ---- Workaround for project path whitespace: Disable macro path hiding ----
+CONFIG_COMPILER_HIDE_PATHS_MACROS=n
+
+# ---- DHCP Server client hostname reporting ----
+CONFIG_LWIP_DHCPS_REPORT_CLIENT_HOSTNAME=y
+
