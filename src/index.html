@@ -1,0 +1,1923 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 WiFi Extender</title>
+                <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-primary: #ecf0f6;
+            --bg-secondary: #f4f6fa;
+            --bg-card: rgba(255, 255, 255, 0.45);
+            --bg-card-hover: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(255, 255, 255, 0.5);
+            --border-color-hover: rgba(59, 130, 246, 0.3);
+            
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #8c9ba5;
+            
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.2);
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.2);
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #0284c7;
+            
+            --neon-cyan: #0284c7;
+            --neon-purple: #8b5cf6;
+            --neon-green: #10b981;
+            --neon-amber: #f59e0b;
+            --neon-red: #ef4444;
+
+            --chart-grid: rgba(0, 0, 0, 0.06);
+            --radius: 20px;
+            --radius-sm: 12px;
+            
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --box-glow: 0 8px 32px 0 rgba(31, 38, 135, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Global Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 18px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--neon-cyan));
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            color: #fff;
+        }
+        .logo-text h1 {
+            font-family: 'Inter', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #0284c7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-text span {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-red);
+            box-shadow: 0 0 8px var(--neon-red);
+            position: relative;
+        }
+        .status-dot.connected {
+            background: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
+        }
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            border: 1px solid currentColor;
+            opacity: 0;
+            animation: beaconPulse 2s infinite;
+        }
+        .status-dot.connected::after {
+            color: var(--neon-green);
+        }
+        .status-dot:not(.connected)::after {
+            color: var(--neon-red);
+        }
+        @keyframes beaconPulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* ---- Tabs Navigation ---- */
+        .tabs {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 14px;
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 4px 16px rgba(31, 38, 135, 0.04);
+        }
+        .tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .tab.active {
+            color: #0f172a;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.04);
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+            animation: tabShift 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes tabShift {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---- Cards System ---- */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--box-glow);
+            transition: var(--transition);
+        }
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-color-hover);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+            transform: translateY(-2px);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .card-title {
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        /* ---- Stats Grid & Cards ---- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--box-glow);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-color-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+        }
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 14px;
+            opacity: 0.85;
+        }
+        .stat-value {
+            font-family: inherit;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            letter-spacing: -1px;
+        }
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ---- Signal progress bars ---- */
+        .stat-card .progress-bar {
+            height: 4px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 2px;
+            margin-top: 14px;
+            overflow: hidden;
+        }
+        .stat-card .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .progress-fill.good { background: var(--neon-green); box-shadow: 0 0 4px var(--neon-green); }
+        .progress-fill.medium { background: var(--neon-amber); box-shadow: 0 0 4px var(--neon-amber); }
+        .progress-fill.poor { background: var(--neon-red); box-shadow: 0 0 4px var(--neon-red); }
+
+        /* ---- Form Controls & Inputs ---- */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-control {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+        }
+
+        /* ---- Buttons System ---- */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            border: none;
+            color: #fff;
+            padding: 12px 20px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            filter: brightness(1.05);
+        }
+        .btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #047857);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        }
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+        .btn-outline:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.15);
+        }
+
+        /* ---- Tables System ---- */
+        .clients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .clients-table th, .clients-table td {
+            padding: 14px 16px;
+            text-align: left;
+        }
+        .clients-table th {
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: rgba(0, 0, 0, 0.01);
+        }
+        .clients-table td {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        }
+        .clients-table tr:hover td {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ---- Details rows ---- */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            font-size: 14px;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* ---- Badges ---- */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            color: var(--text-secondary);
+        }
+        .badge-green {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #065f46;
+        }
+        .badge-orange {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #92400e;
+        }
+        .badge-red {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #991b1b;
+        }
+
+        /* ---- Wi-Fi Networks Lists ---- */
+        .network-list {
+            list-style: none;
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .network-item:last-child {
+            border-bottom: none;
+        }
+        .network-item:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+        .network-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .network-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .network-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+        .network-signal {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        .network-signal span {
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* ---- Loading Spinner ---- */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ---- Modal System ---- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: var(--radius);
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .modal-overlay.show .modal {
+            transform: translateY(0);
+        }
+        .modal h3 {
+            font-family: inherit;
+            font-size: 18px;
+            margin-bottom: 14px;
+            color: #0f172a;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* ---- Toast Notifications ---- */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--accent-blue);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+            color: var(--text-primary);
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: var(--transition);
+            backdrop-filter: blur(20px);
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success { border-color: var(--accent-green); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.08); }
+        .toast.error { border-color: var(--accent-red); box-shadow: 0 8px 32px rgba(239, 68, 68, 0.08); }
+        .toast.info { border-color: var(--accent-blue); box-shadow: 0 8px 32px rgba(59, 130, 246, 0.08); }
+
+        /* Custom client names display styles */
+        .client-name-badge {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+
+        /* ---- Signal Bars display ---- */
+        .signal-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 24px;
+        }
+        .signal-bar {
+            width: 6px;
+            border-radius: 2px;
+            background: rgba(0, 0, 0, 0.06);
+            transition: var(--transition);
+        }
+        .signal-bar:nth-child(1) { height: 6px; }
+        .signal-bar:nth-child(2) { height: 10px; }
+        .signal-bar:nth-child(3) { height: 16px; }
+        .signal-bar:nth-child(4) { height: 20px; }
+        .signal-bar:nth-child(5) { height: 24px; }
+
+        .signal-bar.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 4px var(--neon-green);
+        }
+        .signal-bar.medium {
+            background: var(--neon-amber);
+            box-shadow: 0 0 4px var(--neon-amber);
+        }
+        .signal-bar.weak {
+            background: var(--neon-red);
+            box-shadow: 0 0 4px var(--neon-red);
+        }
+        .signal-dbm {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* Morphing Background Blobs */
+        .liquid-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -2;
+            pointer-events: none;
+            opacity: 0.6;
+            mix-blend-mode: normal;
+        }
+        .blob1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #7dd3fc 0%, transparent 70%);
+            top: -10%;
+            left: -10%;
+            animation: floatBlob1 24s infinite alternate ease-in-out;
+        }
+        .blob2 {
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+            bottom: -10%;
+            right: -10%;
+            animation: floatBlob2 28s infinite alternate ease-in-out;
+        }
+        .blob3 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #c7d2fe 0%, transparent 70%);
+            top: 35%;
+            left: 15%;
+            animation: floatBlob3 26s infinite alternate ease-in-out;
+        }
+        .blob4 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, #a5f3fc 0%, transparent 70%);
+            top: 10%;
+            right: 10%;
+            animation: floatBlob4 22s infinite alternate ease-in-out;
+        }
+
+        @keyframes floatBlob1 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 80px) scale(1.15); }
+        }
+        @keyframes floatBlob2 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-120px, -80px) scale(1.25); }
+        }
+        @keyframes floatBlob3 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(80px, -60px) scale(0.9); }
+        }
+        @keyframes floatBlob4 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-70px, 100px) scale(1.1); }
+        }
+
+        /* Mouse Spotlight Glow */
+        #mouse-glow {
+            position: fixed;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(56, 189, 248, 0.08) 50%, transparent 75%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            left: -999px;
+            top: -999px;
+            z-index: -1;
+            transition: left 0.1s ease-out, top 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- iOS Liquid Glass Background Blobs & Spotlight -->
+    <div class="liquid-blob blob1"></div>
+    <div class="liquid-blob blob2"></div>
+    <div class="liquid-blob blob3"></div>
+    <div class="liquid-blob blob4"></div>
+    <div id="mouse-glow"></div>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">📡</div>
+                <div class="logo-text">
+                    <h1>EXTENDER CORE</h1>
+                    <span>System Gateway // v3.1</span>
+                </div>
+            </div>
+            <div class="header-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Checking...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="showTab('wifi')">📶 WiFi Setup</button>
+            <button class="tab" onclick="showTab('hotspot')">📡 Hotspot Config</button>
+            <button class="tab" onclick="showTab('clients')">👥 Connected Clients</button>
+            <button class="tab" onclick="showTab('system')">⚙️ System Core</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="tab-dashboard">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📶</div>
+                    <div class="stat-value" id="rssiValue">--</div>
+                    <div class="stat-label">Signal Strength (dBm)</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill good" id="rssiBar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="clientCount">0</div>
+                    <div class="stat-label">Connected Clients</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value" id="uptime">00:00:00</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💾</div>
+                    <div class="stat-value" id="freeHeap">--</div>
+                    <div class="stat-label">Free Memory (KB)</div>
+                </div>
+            </div>
+
+            <!-- Traffic Monitor Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📈 Real-Time Network Traffic</div>
+                </div>
+                <div class="chart-container" style="margin-bottom: 20px; height: 160px; position: relative; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border-color); padding: 10px; overflow: hidden;">
+                    <!-- SVG Chart -->
+                    <svg id="trafficChart" style="width:100%; height:100%; display:block;" viewBox="0 0 500 120" preserveAspectRatio="none">
+                        <defs>
+                            <!-- Gradients for area fills -->
+                            <linearGradient id="downloadGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="var(--accent-blue)" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="var(--accent-blue)" stop-opacity="0.0"/>
+                            </linearGradient>
+                            <linearGradient id="uploadGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="var(--accent-purple)" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="var(--accent-purple)" stop-opacity="0.0"/>
+                            </linearGradient>
+                            <!-- Glow filters for lines -->
+                            <filter id="glow-download" x="-10%" y="-10%" width="120%" height="120%">
+                                <feGaussianBlur stdDeviation="2" result="blur"/>
+                                <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                            <filter id="glow-upload" x="-10%" y="-10%" width="120%" height="120%">
+                                <feGaussianBlur stdDeviation="2" result="blur"/>
+                                <feMerge>
+                                    <feMergeNode in="blur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Grid Lines -->
+                        <g stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="4,4">
+                            <line x1="0" y1="20" x2="500" y2="20" />
+                            <line x1="0" y1="60" x2="500" y2="60" />
+                            <line x1="0" y1="100" x2="500" y2="100" />
+                        </g>
+                        <!-- Area paths (under the lines) -->
+                        <path id="downloadArea" fill="url(#downloadGrad)" d="M 0 120 L 500 120 Z" />
+                        <path id="uploadArea" fill="url(#uploadGrad)" d="M 0 120 L 500 120 Z" />
+                        <!-- Line paths -->
+                        <path id="downloadLine" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-download)" d="" />
+                        <path id="uploadLine" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-upload)" d="" />
+                    </svg>
+                    <!-- Floating Y-axis speed labels -->
+                    <div id="chartMaxLabel" style="position: absolute; top: 8px; left: 12px; font-size: 10px; color: var(--text-muted); font-weight: 600; background: rgba(17, 24, 39, 0.85); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); pointer-events: none; backdrop-filter: blur(4px);">0 Kbps</div>
+                    <div id="chartMidLabel" style="position: absolute; top: 70px; left: 12px; font-size: 10px; color: var(--text-muted); font-weight: 600; background: rgba(17, 24, 39, 0.85); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); pointer-events: none; backdrop-filter: blur(4px);">0 Kbps</div>
+                    <!-- X-axis time label -->
+                    <div style="position: absolute; bottom: 8px; right: 12px; font-size: 10px; color: var(--text-muted); font-weight: 600; background: rgba(17, 24, 39, 0.85); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); pointer-events: none; backdrop-filter: blur(4px);">Last 60s</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px;">
+                    <div>
+                        <h4 style="font-size:14px; margin-bottom:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">📡 Extender Access Point (Local Clients)</h4>
+                        <div class="info-row">
+                            <span class="info-label">Download Speed</span>
+                            <span class="info-value" id="apTxSpeed" style="color:var(--accent-blue); font-weight:700;">0.00 Kbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Upload Speed</span>
+                            <span class="info-value" id="apRxSpeed" style="color:var(--accent-purple); font-weight:700;">0.00 Kbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Downloaded</span>
+                            <span class="info-value" id="apTxBytes">0.00 MB</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Uploaded</span>
+                            <span class="info-value" id="apRxBytes">0.00 MB</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="font-size:14px; margin-bottom:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">🌐 Uplink Station (Home Router)</h4>
+                        <div class="info-row">
+                            <span class="info-label">Download Speed</span>
+                            <span class="info-value" id="staRxSpeed" style="color:var(--accent-green); font-weight:700;">0.00 Kbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Upload Speed</span>
+                            <span class="info-value" id="staTxSpeed" style="color:var(--accent-orange); font-weight:700;">0.00 Kbps</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Downloaded</span>
+                            <span class="info-value" id="staRxBytes">0.00 MB</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Uploaded</span>
+                            <span class="info-value" id="staTxBytes">0.00 MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placement Helper Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🎯 Extender Placement Helper</div>
+                    <span class="badge" id="placementBadge">Checking...</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="progress-bar" style="height:12px; border-radius:6px; background:rgba(255,255,255,0.03); border: 1px solid var(--border-color); position:relative; overflow: visible;">
+                        <div id="placementIndicator" style="position:absolute; width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid var(--neon-cyan); top:0px; left:50%; transition: left 0.5s ease; box-shadow:0 0 10px var(--neon-cyan); z-index: 5;"></div>
+                        <div style="display:flex; width:100%; height:100%; border-radius:6px; overflow: hidden; opacity: 0.8;">
+                            <div style="width:35%; height:100%; background:rgba(239,68,68,0.15); border-right:1px solid rgba(239,68,68,0.3);" title="Too Far"></div>
+                            <div style="width:40%; height:100%; background:rgba(16,185,129,0.15);" title="Optimal Placement"></div>
+                            <div style="width:25%; height:100%; background:rgba(59,130,246,0.15); border-left:1px solid rgba(59,130,246,0.3);" title="Too Close"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-weight:600;">
+                        <span>TOO FAR</span>
+                        <span>OPTIMAL PLACE</span>
+                        <span>TOO CLOSE</span>
+                    </div>
+                    <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin-top:4px;" id="placementText">
+                        Analyzing signal strength...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Connection Info -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🌐 Connection Details</div>
+                    <span class="badge badge-green" id="connBadge">Unknown</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Home WiFi (STA)</span>
+                    <span class="info-value" id="staSSID">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">STA IP Address</span>
+                    <span class="info-value" id="staIP">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hotspot (AP)</span>
+                    <span class="info-value" id="apSSID">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">AP IP Address</span>
+                    <span class="info-value" id="apIP">192.168.4.1</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">NAT Routing</span>
+                    <span class="info-value" id="naptStatus">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">WiFi Channel</span>
+                    <span class="info-value" id="wifiChannel">--</span>
+                </div>
+            </div>
+
+            <!-- Signal Quality -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📡 Signal Quality</div>
+                </div>
+                <div class="signal-container">
+                    <div class="signal-bars" id="signalBars">
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                    </div>
+                    <span class="signal-dbm" id="signalDbm">-- dBm</span>
+                    <span id="signalLabel" style="color:var(--text-muted); font-size:13px;">No signal</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- WiFi Setup Tab -->
+        <div class="tab-content" id="tab-wifi">
+            <!-- Saved WiFi Profiles Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">💾 Saved WiFi Profiles</div>
+                    <button class="btn btn-outline" onclick="connectBestProfile()" id="connectBestBtn" title="Automatically scan and connect to the strongest saved network">
+                        🚀 Auto-Select Strongest
+                    </button>
+                </div>
+                <ul class="network-list" id="savedList">
+                    <li style="padding:20px; text-align:center; color:var(--text-muted);">
+                        Loading saved profiles...
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🔍 Available Networks</div>
+                    <button class="btn btn-outline" onclick="scanNetworks()" id="scanBtn">
+                        🔄 Scan
+                    </button>
+                </div>
+                <ul class="network-list" id="networkList">
+                    <li style="padding:20px; text-align:center; color:var(--text-muted);">
+                        Click "Scan" to find available WiFi networks
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🔑 Connect to WiFi</div>
+                </div>
+                <div class="form-group">
+                    <label for="staSSIDInput">WiFi Network Name (SSID)</label>
+                    <input type="text" class="form-control" id="staSSIDInput"
+                           placeholder="Enter your home WiFi name">
+                </div>
+                <div class="form-group">
+                    <label for="staPassInput">Password</label>
+                    <input type="password" class="form-control" id="staPassInput"
+                           placeholder="Enter WiFi password">
+                </div>
+                <button class="btn btn-primary" onclick="connectToWiFi()" id="connectBtn">
+                    🔗 Connect
+                </button>
+            </div>
+        </div>
+
+        <!-- Hotspot Config Tab -->
+        <div class="tab-content" id="tab-hotspot">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📡 Hotspot Configuration</div>
+                </div>
+                <div class="form-group">
+                    <label for="apSSIDInput">Hotspot Name (SSID)</label>
+                    <input type="text" class="form-control" id="apSSIDInput"
+                           placeholder="ESP32_Extender">
+                </div>
+                <div class="form-group">
+                    <label for="apPassInput">Hotspot Password (min 8 characters)</label>
+                    <input type="password" class="form-control" id="apPassInput"
+                           placeholder="Enter hotspot password">
+                </div>
+                <button class="btn btn-success" onclick="updateAPConfig()" id="apConfigBtn">
+                    ✅ Save & Apply
+                </button>
+                <p style="margin-top:12px; font-size:12px; color:var(--text-muted);">
+                    ⚠️ Changing hotspot settings will disconnect all current clients.
+                    You'll need to reconnect to the new network name.
+                </p>
+            </div>
+        </div>
+
+        <!-- Clients Tab -->
+        <div class="tab-content" id="tab-clients">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">👥 Connected Devices</div>
+                    <button class="btn btn-outline" onclick="refreshClients()">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <div id="clientsList">
+                    <table class="clients-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Device Name</th>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsBody">
+                            <tr>
+                                <td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">
+                                    No clients connected
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🚫 Blocked Devices (Blacklist)</div>
+                    <button class="btn btn-outline" onclick="loadBlacklist()">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+                    Blocked devices are disconnected immediately and prevented from connecting to the extender hotspot.
+                </p>
+                <ul class="network-list" id="blacklistList">
+                    <li style="padding:20px; text-align:center; color:var(--text-muted);">
+                        Loading blocklist...
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div class="tab-content" id="tab-system">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">ℹ️ Device Information</div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Firmware Version</span>
+                    <span class="info-value">v2.0.0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Chip Model</span>
+                    <span class="info-value" id="chipModel">ESP32</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">STA MAC Address</span>
+                    <span class="info-value" id="staMac">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">AP MAC Address</span>
+                    <span class="info-value" id="apMac">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Free Heap</span>
+                    <span class="info-value" id="sysHeap">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Min Free Heap</span>
+                    <span class="info-value" id="sysMinHeap">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">NAPT Table Size</span>
+                    <span class="info-value" id="naptTable">512 entries</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🔧 Device Controls</div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="restartDevice()">
+                        🔄 Restart Device
+                    </button>
+                    <button class="btn btn-danger" onclick="confirmReset()">
+                        ⚠️ Factory Reset
+                    </button>
+                </div>
+                <p style="margin-top:12px; font-size:12px; color:var(--text-muted);">
+                    Factory reset will erase all saved WiFi credentials and settings.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer with Developer Details -->
+    <div style="text-align: center; padding: 24px 16px 48px; color: var(--text-muted); font-size: 13px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div>Designed & Developed by <strong style="color: var(--accent-blue); font-weight: 700;">ALAN KJ</strong></div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <a href="https://www.instagram.com/_storiesof.kj_?igsh=Yjhpa3U3azhqNzRq" target="_blank" style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 4px; transition: var(--transition);" onmouseover="this.style.color='var(--accent-purple)'" onmouseout="this.style.color='var(--text-secondary)'">
+                <span>📸</span> Instagram
+            </a>
+            <span style="color: rgba(0,0,0,0.1)">|</span>
+            <a href="https://wa.me/918921084834" target="_blank" style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 4px; transition: var(--transition);" onmouseover="this.style.color='var(--accent-green)'" onmouseout="this.style.color='var(--text-secondary)'">
+                <span>💬</span> WhatsApp
+            </a>
+        </div>
+    </div>
+
+    <!-- Connect Modal -->
+    <div class="modal-overlay" id="connectModal">
+        <div class="modal">
+            <h3>🔗 Connect to Network</h3>
+            <p style="margin-bottom:16px; color:var(--text-secondary); font-size:14px;">
+                Enter the password for: <strong id="modalSSID"></strong>
+            </p>
+            <div class="form-group">
+                <label for="modalPass">Password</label>
+                <input type="password" class="form-control" id="modalPass"
+                       placeholder="WiFi password">
+            </div>
+            <div class="btn-group" style="justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="connectFromModal()">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ---- Traffic History (60 Seconds at 1s intervals) ----
+        const maxPoints = 61;
+        const apTxHistory = new Array(maxPoints).fill(0);
+        const apRxHistory = new Array(maxPoints).fill(0);
+
+        // ---- Tab Management ----
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'clients') {
+                refreshClients();
+                loadBlacklist();
+            }
+            if (tabName === 'wifi') loadSavedProfiles();
+        }
+
+        // ---- Toast Notification ----
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // ---- Status Polling ----
+        async function updateStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+
+                // Connection status
+                const dot = document.getElementById('statusDot');
+                const text = document.getElementById('statusText');
+                const badge = document.getElementById('connBadge');
+
+                if (data.sta_connected) {
+                    dot.classList.add('connected');
+                    text.textContent = 'Online';
+                    badge.className = 'badge badge-green';
+                    badge.textContent = 'Connected';
+                } else {
+                    dot.classList.remove('connected');
+                    text.textContent = 'AP Only';
+                    badge.className = 'badge badge-orange';
+                    badge.textContent = 'No Uplink';
+                }
+
+                // Stats
+                document.getElementById('rssiValue').textContent = data.rssi || '--';
+                document.getElementById('clientCount').textContent = data.clients || 0;
+                document.getElementById('uptime').textContent = data.uptime || '00:00:00';
+                document.getElementById('freeHeap').textContent =
+                    data.free_heap ? Math.round(data.free_heap / 1024) : '--';
+
+                // Connection details
+                document.getElementById('staSSID').textContent = data.sta_ssid || 'Not configured';
+                document.getElementById('staIP').textContent = data.sta_ip || 'N/A';
+                document.getElementById('apSSID').textContent = data.ap_ssid || '--';
+                document.getElementById('apIP').textContent = data.ap_ip || '192.168.4.1';
+                document.getElementById('naptStatus').textContent =
+                    data.napt_active ? '✅ Active' : '❌ Inactive';
+                document.getElementById('wifiChannel').textContent = data.channel || '--';
+
+                // Traffic Stats
+                document.getElementById('apTxSpeed').textContent = formatSpeed(data.ap_tx_bps || 0);
+                document.getElementById('apRxSpeed').textContent = formatSpeed(data.ap_rx_bps || 0);
+                document.getElementById('apTxBytes').textContent = formatBytes(data.ap_tx_bytes || 0);
+                document.getElementById('apRxBytes').textContent = formatBytes(data.ap_rx_bytes || 0);
+
+                document.getElementById('staRxSpeed').textContent = formatSpeed(data.sta_rx_bps || 0);
+                document.getElementById('staTxSpeed').textContent = formatSpeed(data.sta_tx_bps || 0);
+                document.getElementById('staRxBytes').textContent = formatBytes(data.sta_rx_bytes || 0);
+                document.getElementById('staTxBytes').textContent = formatBytes(data.sta_tx_bytes || 0);
+
+                // Placement Helper
+                const pBadge = document.getElementById('placementBadge');
+                const pIndicator = document.getElementById('placementIndicator');
+                const pText = document.getElementById('placementText');
+                
+                let pClass = 'badge-red';
+                let pLabel = 'No Uplink';
+                if (data.placement_status === 1) {
+                    pClass = 'badge-red';
+                    pLabel = 'Too Close';
+                } else if (data.placement_status === 2) {
+                    pClass = 'badge-green';
+                    pLabel = 'Optimal';
+                } else if (data.placement_status === 3) {
+                    pClass = 'badge-orange';
+                    pLabel = 'Too Far';
+                }
+                
+                pBadge.className = 'badge ' + pClass;
+                pBadge.textContent = pLabel;
+                pText.textContent = data.placement_msg || 'Analyzing...';
+                
+                let placementPct = 50;
+                if (data.sta_connected && data.rssi < 0) {
+                    placementPct = Math.min(100, Math.max(0, ((data.rssi + 100) / 70) * 100));
+                } else {
+                    placementPct = 0;
+                }
+                pIndicator.style.left = `calc(${placementPct}% - 6px)`;
+
+                // System info
+                document.getElementById('staMac').textContent = data.sta_mac || '--';
+                document.getElementById('apMac').textContent = data.ap_mac || '--';
+                document.getElementById('sysHeap').textContent =
+                    data.free_heap ? data.free_heap + ' bytes' : '--';
+                document.getElementById('sysMinHeap').textContent =
+                    data.min_heap ? data.min_heap + ' bytes' : '--';
+
+                // Signal bars
+                updateSignalBars(data.rssi);
+
+                // RSSI progress bar
+                updateRSSIBar(data.rssi);
+
+                // Update chart history
+                apTxHistory.push(data.ap_tx_bps || 0);
+                if (apTxHistory.length > maxPoints) apTxHistory.shift();
+
+                apRxHistory.push(data.ap_rx_bps || 0);
+                if (apRxHistory.length > maxPoints) apRxHistory.shift();
+
+                drawChart();
+
+            } catch (e) {
+                console.error('Status update failed:', e);
+            }
+        }
+
+        // ---- Render Real-Time Traffic SVG Chart ----
+        function drawChart() {
+            const maxVal = Math.max(...apTxHistory, ...apRxHistory, 1000);
+            
+            document.getElementById('chartMaxLabel').textContent = formatSpeed(maxVal);
+            document.getElementById('chartMidLabel').textContent = formatSpeed(maxVal / 2);
+            
+            const width = 500;
+            const height = 120;
+            const padding = 10;
+            
+            const getCoordinates = (history) => {
+                return history.map((val, i) => {
+                    const x = (i / (maxPoints - 1)) * width;
+                    const y = height - padding - (val / maxVal) * (height - 2 * padding);
+                    return { x, y };
+                });
+            };
+            
+            const txCoords = getCoordinates(apTxHistory);
+            const rxCoords = getCoordinates(apRxHistory);
+            
+            const createSmoothPathD = (coords) => {
+                if (coords.length === 0) return '';
+                let d = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+                if (coords.length === 1) return d;
+                
+                const smoothing = 0.15;
+                const line = (p1, p2) => {
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    return {
+                        length: Math.sqrt(dx*dx + dy*dy),
+                        angle: Math.atan2(dy, dx)
+                    };
+                };
+                
+                const controlPoint = (current, previous, next, reverse) => {
+                    const p = previous || current;
+                    const n = next || current;
+                    const l = line(p, n);
+                    const angle = l.angle + (reverse ? Math.PI : 0);
+                    const length = l.length * smoothing;
+                    const x = current.x + Math.cos(angle) * length;
+                    const y = current.y + Math.sin(angle) * length;
+                    return { x, y };
+                };
+
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const curr = coords[i];
+                    const next = coords[i + 1];
+                    const cp1 = controlPoint(curr, coords[i - 1], next, false);
+                    const cp2 = controlPoint(next, curr, coords[i + 2], true);
+                    
+                    const minY = padding;
+                    const maxY = height - padding;
+                    cp1.y = Math.max(minY, Math.min(maxY, cp1.y));
+                    cp2.y = Math.max(minY, Math.min(maxY, cp2.y));
+                    
+                    d += ` C ${cp1.x.toFixed(1)} ${cp1.y.toFixed(1)}, ${cp2.x.toFixed(1)} ${cp2.y.toFixed(1)}, ${next.x.toFixed(1)} ${next.y.toFixed(1)}`;
+                }
+                return d;
+            };
+            
+            const txPathD = createSmoothPathD(txCoords);
+            const rxPathD = createSmoothPathD(rxCoords);
+            
+            document.getElementById('downloadLine').setAttribute('d', txPathD);
+            document.getElementById('uploadLine').setAttribute('d', rxPathD);
+            
+            const txAreaD = txPathD ? `${txPathD} L ${width} ${height} L 0 ${height} Z` : '';
+            const rxAreaD = rxPathD ? `${rxPathD} L ${width} ${height} L 0 ${height} Z` : '';
+            
+            document.getElementById('downloadArea').setAttribute('d', txAreaD);
+            document.getElementById('uploadArea').setAttribute('d', rxAreaD);
+        }
+
+        function updateSignalBars(rssi) {
+            const bars = document.querySelectorAll('#signalBars .signal-bar');
+            const dbmEl = document.getElementById('signalDbm');
+            const labelEl = document.getElementById('signalLabel');
+
+            let activeBars = 0;
+            let quality = 'No signal';
+            let barClass = '';
+
+            if (!rssi || rssi === 0) {
+                activeBars = 0;
+                quality = 'No signal';
+            } else if (rssi >= -50) {
+                activeBars = 5; quality = 'Excellent'; barClass = 'active';
+            } else if (rssi >= -60) {
+                activeBars = 4; quality = 'Very Good'; barClass = 'active';
+            } else if (rssi >= -70) {
+                activeBars = 3; quality = 'Good'; barClass = 'active medium';
+            } else if (rssi >= -80) {
+                activeBars = 2; quality = 'Fair'; barClass = 'active medium';
+            } else {
+                activeBars = 1; quality = 'Weak'; barClass = 'active weak';
+            }
+
+            bars.forEach((bar, i) => {
+                bar.className = 'signal-bar' + (i < activeBars ? ' ' + barClass : '');
+            });
+
+            dbmEl.textContent = rssi ? rssi + ' dBm' : '-- dBm';
+            labelEl.textContent = quality;
+        }
+
+        function updateRSSIBar(rssi) {
+            const bar = document.getElementById('rssiBar');
+            if (!rssi || rssi === 0) {
+                bar.style.width = '0%';
+                return;
+            }
+            // Map -100..-30 to 0..100%
+            const pct = Math.min(100, Math.max(0, ((rssi + 100) / 70) * 100));
+            bar.style.width = pct + '%';
+
+            bar.className = 'progress-fill';
+            if (rssi >= -60) bar.classList.add('good');
+            else if (rssi >= -75) bar.classList.add('medium');
+            else bar.classList.add('poor');
+        }
+
+        // ---- Network Scanning ----
+        async function scanNetworks() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Scanning...';
+
+            try {
+                const res = await fetch('/scan');
+                const networks = await res.json();
+                const list = document.getElementById('networkList');
+
+                if (networks.length === 0) {
+                    list.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-muted);">No networks found</li>';
+                    return;
+                }
+
+                list.innerHTML = networks.map(n => {
+                    const signalPct = Math.min(100, Math.max(0, ((n.rssi + 100) / 70) * 100));
+                    const lockIcon = n.enc !== 0 ? '🔒' : '🔓';
+                    return `
+                        <li class="network-item" onclick="selectNetwork('${n.ssid.replace(/'/g, "\\'")}')">
+                            <div class="network-info">
+                                <span style="font-size:20px;">${lockIcon}</span>
+                                <div>
+                                    <div class="network-name">${n.ssid}</div>
+                                    <div class="network-meta">Ch ${n.ch} • ${n.enc !== 0 ? 'Secured' : 'Open'}</div>
+                                </div>
+                            </div>
+                            <div class="network-signal">
+                                <span>${n.rssi} dBm</span>
+                                <div style="width:40px; height:4px; background:var(--border-color); border-radius:2px; overflow:hidden;">
+                                    <div style="width:${signalPct}%; height:100%; background:${n.rssi >= -60 ? 'var(--accent-green)' : n.rssi >= -75 ? 'var(--accent-orange)' : 'var(--accent-red)'}; border-radius:2px;"></div>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                showToast('Failed to scan networks', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Scan';
+            }
+        }
+
+        function selectNetwork(ssid) {
+            document.getElementById('modalSSID').textContent = ssid;
+            document.getElementById('modalPass').value = '';
+            document.getElementById('connectModal').classList.add('show');
+            document.getElementById('modalPass').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('connectModal').classList.remove('show');
+        }
+
+        async function connectFromModal() {
+            const ssid = document.getElementById('modalSSID').textContent;
+            const pass = document.getElementById('modalPass').value;
+            closeModal();
+            await doConnect(ssid, pass);
+        }
+
+        async function connectToWiFi() {
+            const ssid = document.getElementById('staSSIDInput').value.trim();
+            const pass = document.getElementById('staPassInput').value;
+
+            if (!ssid) {
+                showToast('Please enter a WiFi network name', 'error');
+                return;
+            }
+
+            await doConnect(ssid, pass);
+        }
+
+        async function doConnect(ssid, pass) {
+            const btn = document.getElementById('connectBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Connecting...';
+            showToast('Connecting to ' + ssid + '...', 'info');
+
+            try {
+                const res = await fetch('/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ssid=' + encodeURIComponent(ssid) + '&password=' + encodeURIComponent(pass)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Connected to ' + ssid + '!', 'success');
+                    setTimeout(updateStatus, 2000);
+                } else {
+                    showToast('Failed to connect: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showToast('Connection request failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔗 Connect';
+            }
+        }
+
+        // ---- Saved WiFi Profiles Management ----
+        async function loadSavedProfiles() {
+            try {
+                const res = await fetch('/profiles');
+                const profiles = await res.json();
+                const list = document.getElementById('savedList');
+
+                if (profiles.length === 0) {
+                    list.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-muted);">No saved profiles. Connect to a network below to save it.</li>';
+                    return;
+                }
+
+                list.innerHTML = profiles.map(p => {
+                    const badge = p.connected ? '<span class="badge badge-green">Active</span>' : '';
+                    const connectBtn = p.connected ? '' : `<button class="btn btn-outline" style="padding: 6px 12px; font-size: 12px;" onclick="connectProfile('${p.ssid.replace(/'/g, "\\'")}')">🔗 Connect</button>`;
+                    const deleteBtn = `<button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; background: linear-gradient(135deg, var(--accent-red), #dc2626);" onclick="deleteProfile('${p.ssid.replace(/'/g, "\\'")}')">🗑️ Delete</button>`;
+                    
+                    return `
+                        <li class="network-item" style="cursor: default;">
+                            <div class="network-info">
+                                <span style="font-size:20px;">💾</span>
+                                <div>
+                                    <div class="network-name" style="display:flex; align-items:center; gap:8px;">${p.ssid} ${badge}</div>
+                                </div>
+                            </div>
+                            <div class="btn-group" style="gap:6px;">
+                                ${connectBtn}
+                                ${deleteBtn}
+                            </div>
+                        </li>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error('Failed to load saved profiles:', e);
+            }
+        }
+
+        async function deleteProfile(ssid) {
+            if (!confirm('Are you sure you want to delete profile: ' + ssid + '?')) return;
+            try {
+                const res = await fetch('/profiles/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ssid=' + encodeURIComponent(ssid)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Profile deleted successfully', 'success');
+                    loadSavedProfiles();
+                    setTimeout(updateStatus, 1000);
+                } else {
+                    showToast('Failed to delete: ' + data.message, 'error');
+                }
+            } catch (e) {
+                showToast('Failed to delete profile', 'error');
+            }
+        }
+
+        async function connectProfile(ssid) {
+            const btn = document.getElementById('connectBestBtn');
+            btn.disabled = true;
+            showToast('Connecting to saved profile ' + ssid + '...', 'info');
+
+            try {
+                const res = await fetch('/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ssid=' + encodeURIComponent(ssid) + '&password='
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Connected to ' + ssid + '!', 'success');
+                    setTimeout(() => {
+                        updateStatus();
+                        loadSavedProfiles();
+                    }, 2000);
+                } else {
+                    showToast('Failed to connect: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showToast('Connection request failed', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function connectBestProfile() {
+            const btn = document.getElementById('connectBestBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Selecting Best...';
+            showToast('Scanning and connecting to the strongest saved WiFi network...', 'info');
+
+            try {
+                const res = await fetch('/profiles/connect-best', {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Connected to best network!', 'success');
+                    setTimeout(() => {
+                        updateStatus();
+                        loadSavedProfiles();
+                    }, 2000);
+                } else {
+                    showToast('Failed to connect: ' + (data.message || 'No saved networks found in range'), 'error');
+                }
+            } catch (e) {
+                showToast('Auto-select connection failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Auto-Select Strongest';
+            }
+        }
+
+        // ---- Traffic & Blacklist Formatting & Callbacks ----
+        function formatSpeed(bps) {
+            if (bps >= 1000000) return (bps / 1000000).toFixed(2) + ' Mbps';
+            if (bps >= 1000) return (bps / 1000).toFixed(2) + ' Kbps';
+            return bps + ' bps';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes + ' B';
+        }
+
+        async function loadBlacklist() {
+            try {
+                const res = await fetch('/blacklist');
+                const list = await res.json();
+                const listEl = document.getElementById('blacklistList');
+
+                if (list.length === 0) {
+                    listEl.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-muted);">No blocked devices</li>';
+                    return;
+                }
+
+                listEl.innerHTML = list.map(item => `
+                    <li class="network-item" style="cursor: default;">
+                        <div class="network-info">
+                            <span style="font-size:20px;">🚫</span>
+                            <div>
+                                <div class="network-name" style="font-family:monospace;">${item.mac}</div>
+                                <div style="font-size:12px; color:var(--text-muted);">${item.name || 'No description'}</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--accent-green); color:var(--accent-green);" onclick="unblockDevice('${item.mac}')">
+                            🔓 Unblock
+                        </button>
+                    </li>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load blacklist:', e);
+            }
+        }
+
+        async function blockClient(mac, name = 'Blocked Device') {
+            if (!confirm('Are you sure you want to block ' + name + ' (' + mac + ')?')) return;
+            try {
+                const res = await fetch('/blacklist/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'mac=' + encodeURIComponent(mac) + '&name=' + encodeURIComponent(name)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Device blocked and disconnected', 'success');
+                    setTimeout(() => {
+                        refreshClients();
+                        loadBlacklist();
+                    }, 1000);
+                } else {
+                    showToast('Failed to block: ' + data.message, 'error');
+                }
+            } catch (e) {
+                showToast('Request failed', 'error');
+            }
+        }
+
+        async function unblockDevice(mac) {
+            if (!confirm('Are you sure you want to unblock: ' + mac + '?')) return;
+            try {
+                const res = await fetch('/blacklist/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'mac=' + encodeURIComponent(mac)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Device unblocked', 'success');
+                    setTimeout(() => {
+                        loadBlacklist();
+                        refreshClients();
+                    }, 1000);
+                } else {
+                    showToast('Failed to unblock: ' + data.message, 'error');
+                }
+            } catch (e) {
+                showToast('Request failed', 'error');
+            }
+        }
+
+        // ---- AP Configuration ----
+        async function updateAPConfig() {
+            const ssid = document.getElementById('apSSIDInput').value.trim();
+            const pass = document.getElementById('apPassInput').value;
+
+            if (pass && pass.length < 8) {
+                showToast('Password must be at least 8 characters', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('apConfigBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Applying...';
+
+            try {
+                const res = await fetch('/ap-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ssid=' + encodeURIComponent(ssid) + '&password=' + encodeURIComponent(pass)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast('Hotspot updated! Reconnect to: ' + (ssid || 'ESP32_Extender'), 'success');
+                } else {
+                    showToast('Failed to update: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showToast('Request failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Save & Apply';
+            }
+        }
+
+        // ---- Clients ----
+        async function refreshClients() {
+            try {
+                const res = await fetch('/clients');
+                const data = await res.json();
+                const tbody = document.getElementById('clientsBody');
+
+                if (!data.clients || data.clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">No clients connected</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.clients.map((c, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td style="font-weight:600; color:var(--text-primary);">${c.name || 'Unknown Device'}</td>
+                        <td>${c.ip}</td>
+                        <td style="font-family:monospace; font-size:13px;">${c.mac}</td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; background: linear-gradient(135deg, var(--accent-red), #dc2626);" onclick="blockClient('${c.mac}', '${(c.name || 'Unknown Device').replace(/'/g, "\\'")}')">
+                                🚫 Block
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to fetch clients:', e);
+            }
+        }
+
+        // ---- System Controls ----
+        async function restartDevice() {
+            if (!confirm('Are you sure you want to restart the device?')) return;
+            showToast('Restarting device...', 'info');
+            try {
+                await fetch('/restart', { method: 'POST' });
+            } catch (e) {}
+            setTimeout(() => {
+                showToast('Device is restarting. Page will reload in 10 seconds...', 'info');
+                setTimeout(() => location.reload(), 10000);
+            }, 1000);
+        }
+
+        function confirmReset() {
+            if (!confirm('⚠️ FACTORY RESET\n\nThis will erase ALL saved settings including WiFi credentials.\n\nAre you sure?')) return;
+            if (!confirm('This action cannot be undone. Continue?')) return;
+            doFactoryReset();
+        }
+
+        async function doFactoryReset() {
+            showToast('Performing factory reset...', 'info');
+            try {
+                await fetch('/reset', { method: 'POST' });
+            } catch (e) {}
+            setTimeout(() => {
+                showToast('Device reset complete. Connect to ESP32_Extender to reconfigure.', 'success');
+            }, 3000);
+        }
+
+        // ---- Initialize ----
+        updateStatus();
+        setInterval(updateStatus, 1000);
+        loadSavedProfiles();
+    
+        // ---- Cursor & Touch Tracking for Liquid Glass Spotlight ----
+        document.addEventListener('mousemove', (e) => {
+            const glow = document.getElementById('mouse-glow');
+            if (glow) {
+                glow.style.left = e.clientX + 'px';
+                glow.style.top = e.clientY + 'px';
+            }
+        });
+        document.addEventListener('touchmove', (e) => {
+            const glow = document.getElementById('mouse-glow');
+            if (glow && e.touches.length > 0) {
+                glow.style.left = e.touches[0].clientX + 'px';
+                glow.style.top = e.touches[0].clientY + 'px';
+            }
+        });
+</script>
+</body>
+</html>
